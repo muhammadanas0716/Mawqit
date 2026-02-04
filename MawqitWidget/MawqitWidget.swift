@@ -36,6 +36,7 @@ struct MawqitWidgetEntryView: View {
     let entry: MawqitProvider.Entry
 
     var body: some View {
+        let daily = DailyContent.forDate(entry.date)
         switch family {
 
         // ───────── Lock-Screen • Inline ─────────
@@ -54,6 +55,16 @@ struct MawqitWidgetEntryView: View {
                 Text("\(entry.hijriDate.hijriYear) AH")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+            }
+            .containerBackground(for: .widget) { Color.clear }
+
+        // ──────── Lock-Screen • Circular ────────
+        case .accessoryCircular:
+            ZStack {
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.25), lineWidth: 2)
+                Text(entry.hijriDate.hijriDay)
+                    .font(.headline)
             }
             .containerBackground(for: .widget) { Color.clear }
 
@@ -101,6 +112,52 @@ struct MawqitWidgetEntryView: View {
                 Color(red: 20/255, green: 40/255, blue: 25/255)
             }
 
+        // ─────── Home-Screen • 4-row (Large) ────
+        case .systemLarge, .systemExtraLarge:
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(entry.hijriDate.hijriMonth)
+                            .font(.title2.weight(.bold))
+                            .foregroundColor(.white)
+                        Text("\(entry.hijriDate.hijriYear) AH")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        Text(entry.hijriDate.gregorianDate)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                    Text(entry.hijriDate.hijriDay)
+                        .font(.system(size: 64, weight: .black, design: .serif))
+                        .foregroundColor(.white)
+                }
+
+                Divider().background(Color.white.opacity(0.2))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Daily Reminder")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.gray)
+                    Text(daily.reminder.text)
+                        .font(.footnote)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+
+                    Text("Hadith")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.gray)
+                    Text(daily.hadith.text)
+                        .font(.footnote)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                }
+            }
+            .padding()
+            .containerBackground(for: .widget) {
+                Color(red: 20/255, green: 40/255, blue: 25/255)
+            }
+
         // ─────────── Fallback ───────────
         default:
             EmptyView()
@@ -119,6 +176,8 @@ struct MawqitWidget: Widget {
         .supportedFamilies([
             .systemSmall,
             .systemMedium,
+            .systemLarge,
+            .accessoryCircular,
             .accessoryRectangular,
             .accessoryInline
         ])
@@ -126,4 +185,3 @@ struct MawqitWidget: Widget {
         .description("Shows today's Hijri date with a moon icon.")
     }
 }
-

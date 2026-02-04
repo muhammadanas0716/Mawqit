@@ -12,5 +12,7 @@ import SwiftUI
 struct MawqitWidgetBundle: WidgetBundle {
     var body: some Widget {
         MawqitWidget()
+        MawqitReminderWidget()
+        MawqitUpcomingWidget()
     }
 }

@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import UIKit
+import CoreLocation
 
 // ─────────────────────────── Color Palette (hard-coded)
 private let primaryGreen   = Color(red: 0.10, green: 0.55, blue: 0.44)   // #198C71
@@ -15,12 +17,33 @@ private let glassStroke    = Color.white.opacity(0.10)
 struct ContentView: View {
     @State private var hijri = HijriDate.current()
     @State private var fact  = FunFacts.random(for: HijriDate.current().hijriMonth)
+    @AppStorage("hadithIndex") private var hadithIndex = 0
+    @State private var dailyDua = ReminderContent.dailyDua(for: Date())
+    @State private var dailyReminder = ReminderContent.dailyReminder(for: Date())
+    @State private var showSettings = false
+    @StateObject private var prayerService = PrayerTimesService()
+    @StateObject private var qiblaService = QiblaService()
+    @AppStorage("selectedDhikrIndex") private var selectedDhikrIndex = -1
+    @AppStorage("userName") private var userName = ""
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 28) {
+                    GreetingCard(name: userName)
                     DateCard(hijri: hijri)
+                    PrayerTimesCard(service: prayerService)
+                    QiblaCard(service: qiblaService)
+                    HadithCard(hadith: ReminderContent.hadith(at: hadithIndex),
+                               index: hadithIndex,
+                               total: ReminderContent.hadithCount,
+                               onNext: advanceHadith,
+                               onPrevious: previousHadith)
+                    DailyReminderCard(reminder: dailyReminder, dua: dailyDua)
+                    DhikrCounterCard(dhikrs: ReminderContent.dhikrOptions,
+                                     selectedIndex: $selectedDhikrIndex,
+                                     fallbackIndex: ReminderContent.dailyDhikrIndex(for: Date()))
+                    RemindersCard(openSettings: { showSettings = true })
                     FactCard(text: fact)
                     SecondaryInfo(hijri: hijri)
                     YearTimeline(today: hijri)
@@ -35,8 +58,19 @@ struct ContentView: View {
             .scrollIndicators(.hidden)
             .refreshable { refresh() }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        Haptics.selection()
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .tint(primaryGreen)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { refresh() } label: {
+                    Button {
+                        refresh()
+                    } label: {
                         Image(systemName: "arrow.clockwise")
                     }
                     .tint(primaryGreen)
@@ -46,11 +80,44 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)   // force dark on devices in Light
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
+        .task {
+            prayerService.requestIfNeeded()
+            qiblaService.requestIfNeeded()
+        }
     }
 
     private func refresh() {
         hijri = HijriDate.current()
         fact  = FunFacts.random(for: hijri.hijriMonth)
+        let now = Date()
+        dailyDua = ReminderContent.dailyDua(for: now)
+        dailyReminder = ReminderContent.dailyReminder(for: now)
+        prayerService.refresh()
+        qiblaService.refresh()
+        Haptics.impact(.light)
+    }
+
+    private func advanceHadith() {
+        let total = ReminderContent.hadithCount
+        guard total > 0 else { return }
+        if hadithIndex < total - 1 {
+            hadithIndex += 1
+            Haptics.selection()
+        } else {
+            Haptics.impact(.light)
+        }
+    }
+
+    private func previousHadith() {
+        if hadithIndex > 0 {
+            hadithIndex -= 1
+            Haptics.selection()
+        } else {
+            Haptics.impact(.light)
+        }
     }
 }
 
@@ -83,6 +150,42 @@ private struct DateCard: View {
     }
 }
 
+// ─────────────────────────── Greeting
+private struct GreetingCard: View {
+    let name: String
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(greetingText)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.white)
+                Text("May your day be filled with barakah.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Text("🌙")
+                .font(.system(size: 28))
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    private var greetingText: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Salam Alaykum"
+        }
+        return "Salam Alaykum, \(trimmed)"
+    }
+}
+
  //──────────────────────────── Fun-Fact Card
 private struct FactCard: View {
     let text: String
@@ -101,6 +204,588 @@ private struct FactCard: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(glassStroke, lineWidth: 1)
         )
+    }
+}
+
+// ─────────────────────────── Hadith Card
+private struct HadithCard: View {
+    let hadith: Hadith
+    let index: Int
+    let total: Int
+    let onNext: () -> Void
+    let onPrevious: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("Hadith of the Day", systemImage: "book.closed")
+                    .foregroundColor(primaryGreen)
+                    .font(.headline)
+                Spacer()
+                Text("No. \(displayIndex) of \(total)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            ScrollView(.vertical) {
+                Text(hadith.text)
+                    .font(.body)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 180)
+            .scrollIndicators(.visible)
+            .clipped()
+
+            Text(hadith.source)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 10) {
+                Button {
+                    onPrevious()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                        Text("Previous")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(glass)
+                    .foregroundColor(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(glassStroke, lineWidth: 1)
+                    )
+                }
+                .disabled(isAtStart)
+                .opacity(isAtStart ? 0.5 : 1)
+
+                Button {
+                    onNext()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Next")
+                            .font(.headline)
+                        Image(systemName: "chevron.right")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(primaryGreen)
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .disabled(isAtEnd)
+                .opacity(isAtEnd ? 0.6 : 1)
+            }
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    private var displayIndex: Int {
+        guard total > 0 else { return 0 }
+        let safe = min(max(index, 0), total - 1)
+        return safe + 1
+    }
+
+    private var isAtStart: Bool {
+        total == 0 || index <= 0
+    }
+
+    private var isAtEnd: Bool {
+        total == 0 || index >= total - 1
+    }
+}
+
+// ─────────────────────────── Daily Reminder
+private struct DailyReminderCard: View {
+    let reminder: IslamicReminder
+    let dua: Dua
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Daily Reminder", systemImage: "sunrise.fill")
+                .foregroundColor(primaryGreen)
+                .font(.headline)
+
+            Text(reminder.text)
+                .font(.body)
+                .foregroundColor(.white)
+
+            Divider().background(glassStroke)
+
+            Text("Dua of the Day")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.white)
+
+            Text(dua.text)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+
+            Text(dua.source)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+}
+
+// ─────────────────────────── Dhikr Counter
+private struct DhikrCounterCard: View {
+    let dhikrs: [Dhikr]
+    @Binding var selectedIndex: Int
+    let fallbackIndex: Int
+    @AppStorage("dhikrCount") private var count = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Dhikr Counter", systemImage: "circle.grid.cross")
+                .foregroundColor(primaryGreen)
+                .font(.headline)
+
+            HStack {
+                Text("Dhikr")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Picker("Dhikr", selection: selectionBinding) {
+                    ForEach(Array(dhikrs.enumerated()), id: \.offset) { index, dhikr in
+                        Text(dhikr.text).tag(index)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(primaryGreen)
+                .onChange(of: selectionBinding.wrappedValue) { _ in
+                    Haptics.selection()
+                }
+            }
+
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(currentDhikr.text)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(.white)
+                    Text("Recommended: \(currentDhikr.count)x • \(currentDhikr.source)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text("\(count)")
+                    .font(.system(size: 44, weight: .black, design: .serif))
+                    .foregroundColor(.white)
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    count += 1
+                    Haptics.selection()
+                } label: {
+                    Text("Tap +1")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(primaryGreen)
+                        .foregroundColor(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
+                Button {
+                    count = 0
+                    Haptics.impact(.light)
+                } label: {
+                    Text("Reset")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(glass)
+                        .foregroundColor(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(glassStroke, lineWidth: 1)
+                        )
+                }
+            }
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    private var selectionBinding: Binding<Int> {
+        Binding(
+            get: { resolvedIndex },
+            set: { selectedIndex = $0 }
+        )
+    }
+
+    private var resolvedIndex: Int {
+        guard !dhikrs.isEmpty else { return 0 }
+        if selectedIndex < 0 || selectedIndex >= dhikrs.count {
+            let safeFallback = ((fallbackIndex % dhikrs.count) + dhikrs.count) % dhikrs.count
+            return safeFallback
+        }
+        return selectedIndex
+    }
+
+    private var currentDhikr: Dhikr {
+        guard !dhikrs.isEmpty else {
+            return Dhikr(text: "Dhikr", count: 0, source: "")
+        }
+        return dhikrs[resolvedIndex]
+    }
+}
+
+// ─────────────────────────── Reminders Quick Card
+private struct RemindersCard: View {
+    let openSettings: () -> Void
+    @AppStorage("reminderHadithEnabled") private var hadithEnabled = false
+    @AppStorage("reminderDhikrEnabled") private var dhikrEnabled = false
+    @AppStorage("reminderJumuahEnabled") private var jumuahEnabled = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Reminders", systemImage: "bell.badge")
+                .foregroundColor(primaryGreen)
+                .font(.headline)
+
+            Text(summaryText)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+
+            Button {
+                Haptics.selection()
+                openSettings()
+            } label: {
+                Text("Manage Notifications")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(glass)
+                    .foregroundColor(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(glassStroke, lineWidth: 1)
+                    )
+            }
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    private var summaryText: String {
+        let active = [
+            hadithEnabled ? "Hadith" : nil,
+            dhikrEnabled ? "Dhikr" : nil,
+            jumuahEnabled ? "Jumu'ah" : nil
+        ].compactMap { $0 }
+        if active.isEmpty {
+            return "No reminders enabled yet. Set a schedule to stay consistent."
+        }
+        return "Active: " + active.joined(separator: " • ")
+    }
+}
+
+// ─────────────────────────── Prayer Times
+private struct PrayerTimesCard: View {
+    @ObservedObject var service: PrayerTimesService
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("Prayer Times", systemImage: "clock")
+                    .foregroundColor(primaryGreen)
+                    .font(.headline)
+                Spacer()
+                if service.isLoading {
+                    ProgressView()
+                        .tint(primaryGreen)
+                }
+            }
+
+            Text(service.locationName)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            content
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch service.status {
+        case .denied, .restricted:
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Enable location to see prayer times.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+                .font(.headline)
+                .tint(primaryGreen)
+            }
+        case .notDetermined:
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Allow location to calculate accurate prayer times.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button("Enable Location") {
+                    service.requestLocation()
+                }
+                .font(.headline)
+                .tint(primaryGreen)
+            }
+        default:
+            if let times = service.times {
+                PrayerTimesList(times: times)
+            } else if let errorMessage = service.errorMessage {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Button("Retry") {
+                        service.refresh()
+                    }
+                    .font(.headline)
+                    .tint(primaryGreen)
+                }
+            } else {
+                Text("Fetching prayer times...")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+private struct PrayerTimesList: View {
+    let times: PrayerTimesDay
+
+    var body: some View {
+        TimelineView(.periodic(from: Date(), by: 60)) { context in
+            let next = times.nextPrayer(after: context.date)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Next")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(next.0.displayName)
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(.white)
+                    }
+                    Spacer()
+                    Text(countdownString(to: next.1, now: context.date))
+                        .font(.headline)
+                        .foregroundColor(primaryGreen)
+                }
+
+                VStack(spacing: 6) {
+                    ForEach(times.ordered, id: \.0) { item in
+                        PrayerTimeRow(name: item.0.displayName,
+                                      time: formatTime(item.1, timeZone: times.timeZone),
+                                      isNext: item.0 == next.0)
+                    }
+                }
+            }
+        }
+    }
+
+    private func formatTime(_ date: Date, timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.timeZone = timeZone
+        return formatter.string(from: date)
+    }
+
+    private func countdownString(to date: Date, now: Date) -> String {
+        let interval = max(0, Int(date.timeIntervalSince(now)))
+        let hours = interval / 3600
+        let minutes = (interval % 3600) / 60
+        if hours > 0 {
+            return String(format: "%dh %02dm", hours, minutes)
+        }
+        return String(format: "%dm", minutes)
+    }
+}
+
+// ─────────────────────────── Qibla
+private struct QiblaCard: View {
+    @ObservedObject var service: QiblaService
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("Qibla", systemImage: "location.north")
+                    .foregroundColor(primaryGreen)
+                    .font(.headline)
+                Spacer()
+                if !service.isHeadingAvailable {
+                    Text("Compass unavailable")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Text(service.locationName)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            content
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch service.status {
+        case .denied, .restricted:
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Enable location to use the Qibla compass.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+                .font(.headline)
+                .tint(primaryGreen)
+            }
+        case .notDetermined:
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Allow location to calculate the Qibla direction.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button("Enable Location") {
+                    service.requestLocation()
+                }
+                .font(.headline)
+                .tint(primaryGreen)
+            }
+        default:
+            if !service.isHeadingAvailable, let bearing = service.qiblaBearing {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Compass not available on this device.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Text("Qibla bearing: \(Int(bearing.rounded()))° from north")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            } else if let relative = service.relativeAngle {
+                QiblaCompass(angle: relative,
+                             bearing: service.qiblaBearing,
+                             heading: service.heading)
+            } else if let error = service.errorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Calibrating compass...")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+private struct QiblaCompass: View {
+    let angle: Double
+    let bearing: Double?
+    let heading: Double?
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .stroke(glassStroke, lineWidth: 2)
+                    .frame(width: 160, height: 160)
+
+                ForEach(0..<4) { idx in
+                    Capsule()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 2, height: 10)
+                        .offset(y: -80)
+                        .rotationEffect(.degrees(Double(idx) * 90))
+                }
+
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(primaryGreen)
+                    .rotationEffect(.degrees(angle))
+                    .animation(.easeInOut(duration: 0.3), value: angle)
+
+                Text("🕋")
+                    .font(.system(size: 24))
+                    .offset(y: -56)
+            }
+
+            HStack {
+                if let bearing = bearing {
+                    Text("Qibla \(Int(bearing.rounded()))°")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if let heading = heading {
+                    Text("Heading \(Int(heading.rounded()))°")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+}
+
+private struct PrayerTimeRow: View {
+    let name: String
+    let time: String
+    let isNext: Bool
+
+    var body: some View {
+        HStack {
+            Text(name)
+                .font(.subheadline)
+                .foregroundColor(isNext ? .white : .secondary)
+            Spacer()
+            Text(time)
+                .font(.subheadline.weight(isNext ? .semibold : .regular))
+                .foregroundColor(isNext ? primaryGreen : .secondary)
+        }
     }
 }
 
@@ -124,7 +809,7 @@ private struct SecondaryInfo: View {
                 .foregroundColor(primaryGreen)
                 .font(.headline)
 
-            Text("Prayer times and significant dates will appear here.")
+            Text("Ramadan tools and more insights are coming soon.")
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .padding(.leading, 28)
@@ -156,7 +841,7 @@ struct YearTimeline: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Timeline 1447 AH")
+            Text("Timeline \(HijriEvents1447.yearLabel)")
                 .font(.headline)
                 .foregroundColor(primaryGreen)
                 .padding(.bottom, 8)
@@ -391,4 +1076,3 @@ enum FunFacts {
         data[month]?.randomElement() ?? "Welcome to the Hijri calendar!"
     }
 }
-

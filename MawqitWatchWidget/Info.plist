@@ -8,12 +8,10 @@
 		<dict>
 			<key>WKWidgetFamily</key>
 			<array>
-				<string>systemSmall</string>
-				<string>systemMedium</string>
-				<string>systemLarge</string>
-				<string>accessoryCircular</string>
 				<string>accessoryInline</string>
+				<string>accessoryCircular</string>
 				<string>accessoryRectangular</string>
+				<string>accessoryCorner</string>
 			</array>
 		</dict>
 		<key>NSExtensionPointIdentifier</key>

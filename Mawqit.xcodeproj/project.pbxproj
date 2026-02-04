@@ -12,6 +12,12 @@
 		FA63084B2E24BF6A00C40A46 /* MawqitWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FA6308352E24BF6700C40A46 /* MawqitWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FA6308562E24CB8500C40A46 /* SharedHijriDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */; };
 		FA6308572E24CB8500C40A46 /* SharedHijriDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */; };
+		FA6308712E7A1B0000C40A46 /* SharedReminderContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */; };
+		FA6308722E7A1B0000C40A46 /* SharedReminderContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */; };
+		FA6308762E7A1B0000C40A46 /* SharedHijriEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */; };
+		FA6308772E7A1B0000C40A46 /* SharedHijriEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */; };
+		FA77CD9E2F33073A000C90AD /* riyad_assalihin.json in Resources */ = {isa = PBXBuildFile; fileRef = FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */; };
+		FA77CD9F2F33073A000C90AD /* riyad_assalihin.json in Resources */ = {isa = PBXBuildFile; fileRef = FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,6 +50,9 @@
 		FA6308372E24BF6700C40A46 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		FA6308392E24BF6700C40A46 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedHijriDate.swift; sourceTree = "<group>"; };
+		FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedReminderContent.swift; sourceTree = "<group>"; };
+		FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedHijriEvents.swift; sourceTree = "<group>"; };
+		FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = riyad_assalihin.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -51,13 +60,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-			);
-			target = FA6308342E24BF6700C40A46 /* MawqitWidgetExtension */;
-		};
-		FA63085E2E24D4C600C40A46 /* Exceptions for "Mawqit" folder in "MawqitWidgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				HijriEvents.swift,
 			);
 			target = FA6308342E24BF6700C40A46 /* MawqitWidgetExtension */;
 		};
@@ -75,7 +77,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				FA6308652E24DF7E00C40A46 /* Exceptions for "Mawqit" folder in "Mawqit" target */,
-				FA63085E2E24D4C600C40A46 /* Exceptions for "Mawqit" folder in "MawqitWidgetExtension" target */,
 			);
 			path = Mawqit;
 			sourceTree = "<group>";
@@ -113,7 +114,10 @@
 		FA63081A2E24BED400C40A46 = {
 			isa = PBXGroup;
 			children = (
+				FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */,
 				FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */,
+				FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */,
+				FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */,
 				FA6308252E24BED400C40A46 /* Mawqit */,
 				FA63083B2E24BF6700C40A46 /* MawqitWidget */,
 				FA6308362E24BF6700C40A46 /* Frameworks */,
@@ -231,6 +235,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA77CD9F2F33073A000C90AD /* riyad_assalihin.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,6 +243,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA77CD9E2F33073A000C90AD /* riyad_assalihin.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +255,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA6308562E24CB8500C40A46 /* SharedHijriDate.swift in Sources */,
+				FA6308712E7A1B0000C40A46 /* SharedReminderContent.swift in Sources */,
+				FA6308762E7A1B0000C40A46 /* SharedHijriEvents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +265,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA6308572E24CB8500C40A46 /* SharedHijriDate.swift in Sources */,
+				FA6308722E7A1B0000C40A46 /* SharedReminderContent.swift in Sources */,
+				FA6308772E7A1B0000C40A46 /* SharedHijriEvents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,12 +407,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = P6PV2R9443;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Mawqit/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Mawqit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Mawqit uses your location to show accurate prayer times.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -413,7 +424,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -428,12 +439,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = P6PV2R9443;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Mawqit/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Mawqit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Mawqit uses your location to show accurate prayer times.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -444,7 +456,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -459,7 +471,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = P6PV2R9443;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MawqitWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MawqitWidget;
@@ -470,7 +482,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp.mawqitwidgetapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.mawqitwidgetapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -486,7 +498,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = P6PV2R9443;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MawqitWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MawqitWidget;
@@ -497,7 +509,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp.mawqitwidgetapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.mawqitwidgetapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
