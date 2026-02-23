@@ -16,6 +16,20 @@
 		FA6308722E7A1B0000C40A46 /* SharedReminderContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */; };
 		FA6308762E7A1B0000C40A46 /* SharedHijriEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */; };
 		FA6308772E7A1B0000C40A46 /* SharedHijriEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */; };
+		865018E6778E4F93AEABC606 /* MawqitWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E07585F3D14657800F8233 /* MawqitWatchApp.swift */; };
+		D47F4742E80F4194AC576010 /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E24BD67CD34ECF86984C64 /* WatchContentView.swift */; };
+		02F0EBF94EA64163A7D78931 /* SharedHijriDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */; };
+		F07A2B20641B4AD8B6BDAD1A /* SharedHijriEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */; };
+		F576393D71D44649B81DCF12 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 483F0B60ECC5449FBF1912DD /* Assets.xcassets */; };
+		F1FF67D4387E491291B6029D /* MawqitWatchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0130132B025A452F985D4201 /* MawqitWatchWidget.swift */; };
+		B12C7BA639AB45A0B76673E0 /* MawqitWatchWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F79DA2E0D5349A482284113 /* MawqitWatchWidgetBundle.swift */; };
+		5D782C01F31A4B75AC245A08 /* SharedHijriDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */; };
+		12D8069562C54F88879A807B /* SharedHijriEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */; };
+		AEAA1A0AC76E41CEBFE4E91B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA6308392E24BF6700C40A46 /* SwiftUI.framework */; };
+		C371D1CE3F214C99A701770B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA6308392E24BF6700C40A46 /* SwiftUI.framework */; };
+		ED04066F39EF4C45A9BF7D82 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA6308372E24BF6700C40A46 /* WidgetKit.framework */; };
+		0506E337B1D64008B0C0498B /* MawqitWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D79BBB9910434AC89D085799 /* MawqitWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		38E63F29930B43638333567D /* MawqitWatchWidget.appex in Embed Watch Extensions */ = {isa = PBXBuildFile; fileRef = 95B4650883314A059E7E7BCC /* MawqitWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FA77CD9E2F33073A000C90AD /* riyad_assalihin.json in Resources */ = {isa = PBXBuildFile; fileRef = FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */; };
 		FA77CD9F2F33073A000C90AD /* riyad_assalihin.json in Resources */ = {isa = PBXBuildFile; fileRef = FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */; };
 /* End PBXBuildFile section */
@@ -27,6 +41,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = FA6308342E24BF6700C40A46;
 			remoteInfo = MawqitWidgetExtension;
+		};
+		587F371F1C93488D9257A702 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA63081B2E24BED400C40A46 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CAC3C856E6134AA8B64A0263;
+			remoteInfo = MawqitWatch;
+		};
+		A1830568297F486490ED5B2C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA63081B2E24BED400C40A46 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5F77C7EE9C65439A83C326A8;
+			remoteInfo = MawqitWatchWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -42,6 +70,28 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6C0D2D48E65543B183381F72 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				0506E337B1D64008B0C0498B /* MawqitWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C40DEA6D17D344FD8F38A78F /* Embed Watch Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				38E63F29930B43638333567D /* MawqitWatchWidget.appex in Embed Watch Extensions */,
+			);
+			name = "Embed Watch Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +102,15 @@
 		FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedHijriDate.swift; sourceTree = "<group>"; };
 		FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedReminderContent.swift; sourceTree = "<group>"; };
 		FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedHijriEvents.swift; sourceTree = "<group>"; };
+		29E07585F3D14657800F8233 /* MawqitWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MawqitWatchApp.swift; sourceTree = "<group>"; };
+		75E24BD67CD34ECF86984C64 /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
+		483F0B60ECC5449FBF1912DD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A8B71D2E2E7B4C3A8F6E1C2D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0130132B025A452F985D4201 /* MawqitWatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MawqitWatchWidget.swift; sourceTree = "<group>"; };
+		8F79DA2E0D5349A482284113 /* MawqitWatchWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MawqitWatchWidgetBundle.swift; sourceTree = "<group>"; };
+		FFB1176797954A76BFBA19C8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D79BBB9910434AC89D085799 /* MawqitWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MawqitWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		95B4650883314A059E7E7BCC /* MawqitWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MawqitWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA77CD9D2F33073A000C90AD /* riyad_assalihin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = riyad_assalihin.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -108,6 +167,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6B7198AA7F854EB093D7D8E9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AEAA1A0AC76E41CEBFE4E91B /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		705FA3D101A9401B818CDD74 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C371D1CE3F214C99A701770B /* SwiftUI.framework in Frameworks */,
+				ED04066F39EF4C45A9BF7D82 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -118,6 +194,8 @@
 				FA6308552E24CB8500C40A46 /* SharedHijriDate.swift */,
 				FA6308702E7A1B0000C40A46 /* SharedReminderContent.swift */,
 				FA6308782E7A1B0000C40A46 /* SharedHijriEvents.swift */,
+				F968CF818A344F8BAA35DE36 /* MawqitWatch */,
+				C20612C0060341519AD7F0D8 /* MawqitWatchWidget */,
 				FA6308252E24BED400C40A46 /* Mawqit */,
 				FA63083B2E24BF6700C40A46 /* MawqitWidget */,
 				FA6308362E24BF6700C40A46 /* Frameworks */,
@@ -130,6 +208,8 @@
 			children = (
 				FA6308232E24BED400C40A46 /* Mawqit.app */,
 				FA6308352E24BF6700C40A46 /* MawqitWidgetExtension.appex */,
+				D79BBB9910434AC89D085799 /* MawqitWatch.app */,
+				95B4650883314A059E7E7BCC /* MawqitWatchWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -143,6 +223,27 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		F968CF818A344F8BAA35DE36 /* MawqitWatch */ = {
+			isa = PBXGroup;
+			children = (
+				483F0B60ECC5449FBF1912DD /* Assets.xcassets */,
+				A8B71D2E2E7B4C3A8F6E1C2D /* Info.plist */,
+				29E07585F3D14657800F8233 /* MawqitWatchApp.swift */,
+				75E24BD67CD34ECF86984C64 /* WatchContentView.swift */,
+			);
+			path = MawqitWatch;
+			sourceTree = "<group>";
+		};
+		C20612C0060341519AD7F0D8 /* MawqitWatchWidget */ = {
+			isa = PBXGroup;
+			children = (
+				FFB1176797954A76BFBA19C8 /* Info.plist */,
+				0130132B025A452F985D4201 /* MawqitWatchWidget.swift */,
+				8F79DA2E0D5349A482284113 /* MawqitWatchWidgetBundle.swift */,
+			);
+			path = MawqitWatchWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -154,11 +255,13 @@
 				FA6308202E24BED400C40A46 /* Frameworks */,
 				FA6308212E24BED400C40A46 /* Resources */,
 				FA6308502E24BF6A00C40A46 /* Embed Foundation Extensions */,
+				6C0D2D48E65543B183381F72 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				FA63084A2E24BF6A00C40A46 /* PBXTargetDependency */,
+				693FB269858F41F49CD75D31 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				FA6308252E24BED400C40A46 /* Mawqit */,
@@ -181,6 +284,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				BD3E7CB8697C4CB0AB2F70BC /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				FA63083B2E24BF6700C40A46 /* MawqitWidget */,
@@ -190,6 +294,45 @@
 			);
 			productName = MawqitWidgetExtension;
 			productReference = FA6308352E24BF6700C40A46 /* MawqitWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		CAC3C856E6134AA8B64A0263 /* MawqitWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6CA45E708C6046278F0F1717 /* Build configuration list for PBXNativeTarget "MawqitWatch" */;
+			buildPhases = (
+				3098F54361DF4677B4EAF1DC /* Sources */,
+				6B7198AA7F854EB093D7D8E9 /* Frameworks */,
+				92951468238D4EB3BC41E5DC /* Resources */,
+				C40DEA6D17D344FD8F38A78F /* Embed Watch Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MawqitWatch;
+			packageProductDependencies = (
+			);
+			productName = MawqitWatch;
+			productReference = D79BBB9910434AC89D085799 /* MawqitWatch.app */;
+			productType = "com.apple.product-type.application.watchapp2";
+		};
+		5F77C7EE9C65439A83C326A8 /* MawqitWatchWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 94015DB5397D49D4ADC0D6EA /* Build configuration list for PBXNativeTarget "MawqitWatchWidget" */;
+			buildPhases = (
+				AE549CABBFEE48F594AEB817 /* Sources */,
+				705FA3D101A9401B818CDD74 /* Frameworks */,
+				18F7798C1CF747C183725BE3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MawqitWatchWidget;
+			packageProductDependencies = (
+			);
+			productName = MawqitWatchWidget;
+			productReference = 95B4650883314A059E7E7BCC /* MawqitWatchWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -206,6 +349,12 @@
 						CreatedOnToolsVersion = 16.4;
 					};
 					FA6308342E24BF6700C40A46 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					CAC3C856E6134AA8B64A0263 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					5F77C7EE9C65439A83C326A8 = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
@@ -226,6 +375,8 @@
 			targets = (
 				FA6308222E24BED400C40A46 /* Mawqit */,
 				FA6308342E24BF6700C40A46 /* MawqitWidgetExtension */,
+				CAC3C856E6134AA8B64A0263 /* MawqitWatch */,
+				5F77C7EE9C65439A83C326A8 /* MawqitWatchWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -244,6 +395,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA77CD9E2F33073A000C90AD /* riyad_assalihin.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		92951468238D4EB3BC41E5DC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F576393D71D44649B81DCF12 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18F7798C1CF747C183725BE3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,6 +436,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3098F54361DF4677B4EAF1DC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				865018E6778E4F93AEABC606 /* MawqitWatchApp.swift in Sources */,
+				D47F4742E80F4194AC576010 /* WatchContentView.swift in Sources */,
+				02F0EBF94EA64163A7D78931 /* SharedHijriDate.swift in Sources */,
+				F07A2B20641B4AD8B6BDAD1A /* SharedHijriEvents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AE549CABBFEE48F594AEB817 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1FF67D4387E491291B6029D /* MawqitWatchWidget.swift in Sources */,
+				B12C7BA639AB45A0B76673E0 /* MawqitWatchWidgetBundle.swift in Sources */,
+				5D782C01F31A4B75AC245A08 /* SharedHijriDate.swift in Sources */,
+				12D8069562C54F88879A807B /* SharedHijriEvents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -277,6 +465,16 @@
 			isa = PBXTargetDependency;
 			target = FA6308342E24BF6700C40A46 /* MawqitWidgetExtension */;
 			targetProxy = FA6308492E24BF6A00C40A46 /* PBXContainerItemProxy */;
+		};
+		693FB269858F41F49CD75D31 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CAC3C856E6134AA8B64A0263 /* MawqitWatch */;
+			targetProxy = 587F371F1C93488D9257A702 /* PBXContainerItemProxy */;
+		};
+		BD3E7CB8697C4CB0AB2F70BC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5F77C7EE9C65439A83C326A8 /* MawqitWatchWidget */;
+			targetProxy = A1830568297F486490ED5B2C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -484,7 +682,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.mawqitwidgetapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -511,10 +709,115 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.mawqitwidgetapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3A00D08EE52E43A58CDCD8ED /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MawqitWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BINARY_SOURCE_PATH = "";
+				PRODUCT_TYPE_HAS_STUB_BINARY = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.watchapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		956F104C24524157A86A7641 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MawqitWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BINARY_SOURCE_PATH = "";
+				PRODUCT_TYPE_HAS_STUB_BINARY = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.watchapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+		4FE3CEE670C94C2480D8F8DB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MawqitWatchWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MawqitWatchWidget;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.watchapp.watchwidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		CF3683D9226B4254B4FAC08E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3VW49TR7MS;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MawqitWatchWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MawqitWatchWidget;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muhammadanas.mawqitapp2026.watchapp.watchwidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
 			};
 			name = Release;
 		};
@@ -544,6 +847,24 @@
 			buildConfigurations = (
 				FA63084E2E24BF6A00C40A46 /* Debug */,
 				FA63084F2E24BF6A00C40A46 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6CA45E708C6046278F0F1717 /* Build configuration list for PBXNativeTarget "MawqitWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A00D08EE52E43A58CDCD8ED /* Debug */,
+				956F104C24524157A86A7641 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		94015DB5397D49D4ADC0D6EA /* Build configuration list for PBXNativeTarget "MawqitWatchWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4FE3CEE670C94C2480D8F8DB /* Debug */,
+				CF3683D9226B4254B4FAC08E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

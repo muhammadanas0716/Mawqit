@@ -6,6 +6,11 @@
 import WidgetKit
 import SwiftUI
 
+struct UpcomingEventItem: Hashable {
+    let event: HijriEvent
+    let days: Int
+}
+
 struct WatchHijriEntry: TimelineEntry {
     let date: Date
     let hijriDate: HijriDate
@@ -42,7 +47,7 @@ struct WatchHijriWidgetView: View {
                 VStack(spacing: 2) {
                     Text(entry.hijriDate.hijriDay)
                         .font(.headline)
-                    Text("AH")
+                    Text(monthShort)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -59,10 +64,18 @@ struct WatchHijriWidgetView: View {
                     .foregroundColor(.secondary)
             }
         case .accessoryCorner:
-            Text(entry.hijriDate.hijriDay)
+            Text("\(entry.hijriDate.hijriDay) \(monthShort)")
         default:
             EmptyView()
         }
+    }
+
+    private var monthShort: String {
+        let trimmed = entry.hijriDate.hijriMonth.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let firstWord = trimmed.split(separator: " ").first {
+            return String(firstWord.prefix(3))
+        }
+        return String(trimmed.prefix(3))
     }
 }
 

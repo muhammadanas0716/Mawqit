@@ -7,9 +7,27 @@
 
 import Foundation
 
+enum HadithBook: String, CaseIterable, Hashable, Identifiable {
+    case riyadAsSalihin = "riyad_as_salihin"
+    case selectedCollection = "selected_collection"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .riyadAsSalihin:
+            return "Riyad as-Salihin"
+        case .selectedCollection:
+            return "Selected Hadith"
+        }
+    }
+}
+
 struct Hadith: Hashable {
     let text: String
     let source: String
+    let book: HadithBook
+    let number: Int
 }
 
 struct Dua: Hashable {
@@ -45,20 +63,32 @@ struct DailyContent: Hashable {
 }
 
 enum ReminderContent {
-    static let hadiths: [Hadith] = {
-        if let loaded = HadithLoader.loadRiyadHadiths() {
-            return loaded
-        }
-        return fallbackHadiths
+    private static let hadithsByBook: [HadithBook: [Hadith]] = {
+        let riyad = HadithLoader.loadRiyadHadiths() ?? []
+        return [
+            .riyadAsSalihin: riyad,
+            .selectedCollection: fallbackHadiths
+        ]
     }()
 
+    static var hadithBooks: [HadithBook] {
+        HadithBook.allCases.filter { !hadiths(for: $0).isEmpty }
+    }
+
+    static var defaultHadithBook: HadithBook {
+        if !(hadithsByBook[.riyadAsSalihin] ?? []).isEmpty {
+            return .riyadAsSalihin
+        }
+        return .selectedCollection
+    }
+
     private static let fallbackHadiths: [Hadith] = [
-        Hadith(text: "Actions are judged by intentions.", source: "Sahih al-Bukhari & Sahih Muslim"),
-        Hadith(text: "The best among you are those who learn the Quran and teach it.", source: "Sahih al-Bukhari"),
-        Hadith(text: "Allah does not look at your bodies or wealth, but at your hearts and deeds.", source: "Sahih Muslim"),
-        Hadith(text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari & Sahih Muslim"),
-        Hadith(text: "Whoever believes in Allah and the Last Day should speak good or remain silent.", source: "Sahih al-Bukhari & Sahih Muslim"),
-        Hadith(text: "Smiling in your brother's face is charity.", source: "Jami` at-Tirmidhi")
+        Hadith(text: "Actions are judged by intentions.", source: "Sahih al-Bukhari & Sahih Muslim", book: .selectedCollection, number: 1),
+        Hadith(text: "The best among you are those who learn the Quran and teach it.", source: "Sahih al-Bukhari", book: .selectedCollection, number: 2),
+        Hadith(text: "Allah does not look at your bodies or wealth, but at your hearts and deeds.", source: "Sahih Muslim", book: .selectedCollection, number: 3),
+        Hadith(text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari & Sahih Muslim", book: .selectedCollection, number: 4),
+        Hadith(text: "Whoever believes in Allah and the Last Day should speak good or remain silent.", source: "Sahih al-Bukhari & Sahih Muslim", book: .selectedCollection, number: 5),
+        Hadith(text: "Smiling in your brother's face is charity.", source: "Jami` at-Tirmidhi", book: .selectedCollection, number: 6)
     ]
 
     static let duas: [Dua] = [
@@ -133,8 +163,13 @@ enum ReminderContent {
         IslamicReminder(text: "End the day with Surah Al-Ikhlas, Al-Falaq, and An-Nas.", source: "")
     ]
 
-    static func dailyHadith(for date: Date) -> Hadith {
-        hadith(at: dailyHadithIndex(for: date))
+    static func hadiths(for book: HadithBook) -> [Hadith] {
+        hadithsByBook[book] ?? []
+    }
+
+    static func dailyHadith(for date: Date, in book: HadithBook? = nil) -> Hadith {
+        let resolvedBook = resolved(book)
+        return hadith(at: dailyHadithIndex(for: date, in: resolvedBook), in: resolvedBook)
     }
 
     static func dailyDua(for date: Date) -> Dua {
@@ -158,20 +193,36 @@ enum ReminderContent {
         dailyIndex(for: dhikrs.count, date: date, salt: 13)
     }
 
-    static func dailyHadithIndex(for date: Date) -> Int {
-        dailyIndex(for: hadiths.count, date: date, salt: 0)
+    static func dailyHadithIndex(for date: Date, in book: HadithBook? = nil) -> Int {
+        let list = hadiths(for: resolved(book))
+        return dailyIndex(for: list.count, date: date, salt: 0)
     }
 
     static var hadithCount: Int {
-        hadiths.count
+        hadithCount(in: defaultHadithBook)
     }
 
-    static func hadith(at index: Int) -> Hadith {
-        guard !hadiths.isEmpty else {
-            return Hadith(text: "Welcome to Mawqit.", source: "")
+    static func hadithCount(in book: HadithBook) -> Int {
+        hadiths(for: book).count
+    }
+
+    static func hadith(at index: Int, in book: HadithBook? = nil) -> Hadith {
+        let list = hadiths(for: resolved(book))
+        guard !list.isEmpty else {
+            return Hadith(text: "Welcome to Mawqit.", source: "", book: resolved(book), number: 0)
         }
-        let safeIndex = min(max(index, 0), hadiths.count - 1)
-        return hadiths[safeIndex]
+        let safeIndex = min(max(index, 0), list.count - 1)
+        return list[safeIndex]
+    }
+
+    static func hadithIndex(number: Int, in book: HadithBook) -> Int? {
+        guard number > 0 else { return nil }
+        return hadiths(for: book).firstIndex(where: { $0.number == number })
+    }
+
+    static func hadith(number: Int, in book: HadithBook) -> Hadith? {
+        guard let index = hadithIndex(number: number, in: book) else { return nil }
+        return hadiths(for: book)[index]
     }
 
     private static func pick<T>(from list: [T], date: Date, salt: Int) -> T {
@@ -187,6 +238,13 @@ enum ReminderContent {
         let ordinal = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 1
         return (ordinal + salt) % safeCount
     }
+
+    private static func resolved(_ book: HadithBook?) -> HadithBook {
+        if let book, !hadiths(for: book).isEmpty {
+            return book
+        }
+        return defaultHadithBook
+    }
 }
 
 private enum HadithLoader {
@@ -197,7 +255,7 @@ private enum HadithLoader {
         do {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(RiyadRoot.self, from: data)
-            let mapped = decoded.hadiths.compactMap { hadith -> Hadith? in
+            let mapped = decoded.hadiths.enumerated().compactMap { offset, hadith -> Hadith? in
                 let text = normalize(hadith.english.text)
                 guard !text.isEmpty else { return nil }
                 let narrator = normalize(hadith.english.narrator)
@@ -205,7 +263,8 @@ private enum HadithLoader {
                 if !narrator.isEmpty {
                     source += " • \(narrator)"
                 }
-                return Hadith(text: text, source: source)
+                let number = hadith.idInBook ?? hadith.id ?? (offset + 1)
+                return Hadith(text: text, source: source, book: .riyadAsSalihin, number: number)
             }
             return mapped.isEmpty ? nil : mapped
         } catch {
@@ -223,6 +282,8 @@ private enum HadithLoader {
     }
 
     private struct RiyadHadith: Decodable {
+        let id: Int?
+        let idInBook: Int?
         let english: English
     }
 

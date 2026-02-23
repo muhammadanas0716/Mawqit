@@ -14,13 +14,97 @@ private let primaryGreen   = Color(red: 0.10, green: 0.55, blue: 0.44)   // #198
 private let glass          = Color.white.opacity(0.05)                  // subtle card
 private let glassStroke    = Color.white.opacity(0.10)
 
+private struct HadithReadRecord: Codable, Hashable {
+    let bookRawValue: String
+    let number: Int
+
+    init(book: HadithBook, number: Int) {
+        self.bookRawValue = book.rawValue
+        self.number = number
+    }
+
+    var book: HadithBook {
+        HadithBook(rawValue: bookRawValue) ?? .selectedCollection
+    }
+}
+
+private struct HadithBookmarkRecord: Codable, Hashable, Identifiable {
+    let bookRawValue: String
+    let number: Int
+    let createdAt: TimeInterval
+
+    init(book: HadithBook, number: Int, createdAt: TimeInterval = Date().timeIntervalSince1970) {
+        self.bookRawValue = book.rawValue
+        self.number = number
+        self.createdAt = createdAt
+    }
+
+    var book: HadithBook {
+        HadithBook(rawValue: bookRawValue) ?? .selectedCollection
+    }
+
+    var id: String {
+        "\(bookRawValue)-\(number)"
+    }
+}
+
+private enum HadithReadLogStore {
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static func dayKey(for date: Date) -> String {
+        dayFormatter.string(from: date)
+    }
+
+    static func decode(_ raw: String) -> [String: [HadithReadRecord]] {
+        guard !raw.isEmpty else { return [:] }
+        guard let data = raw.data(using: .utf8) else { return [:] }
+        return (try? JSONDecoder().decode([String: [HadithReadRecord]].self, from: data)) ?? [:]
+    }
+
+    static func encode(_ log: [String: [HadithReadRecord]]) -> String {
+        guard let data = try? JSONEncoder().encode(log),
+              let value = String(data: data, encoding: .utf8) else {
+            return ""
+        }
+        return value
+    }
+
+    static func decodeBookmarks(_ raw: String) -> [HadithBookmarkRecord] {
+        guard !raw.isEmpty else { return [] }
+        guard let data = raw.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([HadithBookmarkRecord].self, from: data)) ?? []
+    }
+
+    static func encodeBookmarks(_ bookmarks: [HadithBookmarkRecord]) -> String {
+        guard let data = try? JSONEncoder().encode(bookmarks),
+              let value = String(data: data, encoding: .utf8) else {
+            return ""
+        }
+        return value
+    }
+}
+
 struct ContentView: View {
     @State private var hijri = HijriDate.current()
     @State private var fact  = FunFacts.random(for: HijriDate.current().hijriMonth)
+    @AppStorage("quranSelectedSurah") private var quranSelectedSurah = 1
+    @AppStorage("quranSelectedPage") private var quranSelectedPage = 1
     @AppStorage("hadithIndex") private var hadithIndex = 0
+    @AppStorage("selectedHadithBook") private var selectedHadithBookRaw = HadithBook.riyadAsSalihin.rawValue
+    @AppStorage("hadithReadLog") private var hadithReadLogStorage = ""
+    @AppStorage("hadithBookmarks") private var hadithBookmarksStorage = ""
     @State private var dailyDua = ReminderContent.dailyDua(for: Date())
     @State private var dailyReminder = ReminderContent.dailyReminder(for: Date())
     @State private var showSettings = false
+    @State private var showQuranReader = false
+    @State private var showHadithBookmarks = false
+    @StateObject private var quranService = QuranService()
     @StateObject private var prayerService = PrayerTimesService()
     @StateObject private var qiblaService = QiblaService()
     @AppStorage("selectedDhikrIndex") private var selectedDhikrIndex = -1
@@ -34,11 +118,24 @@ struct ContentView: View {
                     DateCard(hijri: hijri)
                     PrayerTimesCard(service: prayerService)
                     QiblaCard(service: qiblaService)
-                    HadithCard(hadith: ReminderContent.hadith(at: hadithIndex),
+                    QuranCard(service: quranService,
+                              selectedSurah: $quranSelectedSurah,
+                              onOpenReader: { showQuranReader = true })
+                    HadithCard(hadith: currentHadith,
                                index: hadithIndex,
-                               total: ReminderContent.hadithCount,
+                               total: currentHadithTotal,
+                               books: availableHadithBooks,
+                               selectedBook: selectedHadithBook,
+                               isReadToday: isReadToday,
+                               isBookmarked: isBookmarked,
+                               onSelectBook: selectHadithBook,
+                               onRead: markCurrentHadithRead,
+                               onToggleBookmark: toggleCurrentHadithBookmark,
+                               onCopy: copyCurrentHadith,
+                               onShowBookmarks: { showHadithBookmarks = true },
                                onNext: advanceHadith,
                                onPrevious: previousHadith)
+                    HadithReadCalendarCard(selectedBook: selectedHadithBook, log: hadithReadLog)
                     DailyReminderCard(reminder: dailyReminder, dua: dailyDua)
                     DhikrCounterCard(dhikrs: ReminderContent.dhikrOptions,
                                      selectedIndex: $selectedDhikrIndex,
@@ -83,9 +180,55 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
+        .sheet(isPresented: $showQuranReader) {
+            QuranMushafView(service: quranService, selectedPage: $quranSelectedPage)
+        }
+        .sheet(isPresented: $showHadithBookmarks) {
+            HadithBookmarksView(
+                bookmarks: sortedBookmarks,
+                onSelect: jumpToBookmark,
+                onDelete: deleteBookmark
+            )
+        }
         .task {
+            normalizeHadithBookSelection()
+            normalizeHadithIndex()
+            let safeSurah = normalizedSurah(quranSelectedSurah)
+            let safePage = normalizedPage(quranSelectedPage)
+            if safeSurah != quranSelectedSurah {
+                quranSelectedSurah = safeSurah
+            }
+            if safePage != quranSelectedPage {
+                quranSelectedPage = safePage
+            }
             prayerService.requestIfNeeded()
             qiblaService.requestIfNeeded()
+            await quranService.loadIfNeeded(initialSurah: safeSurah)
+            await quranService.loadPageIfNeeded(initialPage: safePage)
+        }
+        .onChange(of: quranSelectedSurah) { _, newValue in
+            let safeSurah = normalizedSurah(newValue)
+            if safeSurah != quranSelectedSurah {
+                quranSelectedSurah = safeSurah
+                return
+            }
+            Task {
+                await quranService.loadSurah(number: safeSurah)
+            }
+        }
+        .onChange(of: quranSelectedPage) { _, newValue in
+            let safePage = normalizedPage(newValue)
+            if safePage != quranSelectedPage {
+                quranSelectedPage = safePage
+                return
+            }
+            Task {
+                await quranService.loadPage(number: safePage)
+            }
+        }
+        .onChange(of: selectedHadithBookRaw) { _, _ in
+            normalizeHadithBookSelection()
+            normalizeHadithIndex()
         }
     }
 
@@ -97,11 +240,15 @@ struct ContentView: View {
         dailyReminder = ReminderContent.dailyReminder(for: now)
         prayerService.refresh()
         qiblaService.refresh()
+        Task {
+            await quranService.loadSurah(number: normalizedSurah(quranSelectedSurah), forceRefresh: true)
+            await quranService.loadPage(number: normalizedPage(quranSelectedPage), forceRefresh: true)
+        }
         Haptics.impact(.light)
     }
 
     private func advanceHadith() {
-        let total = ReminderContent.hadithCount
+        let total = currentHadithTotal
         guard total > 0 else { return }
         if hadithIndex < total - 1 {
             hadithIndex += 1
@@ -118,6 +265,867 @@ struct ContentView: View {
         } else {
             Haptics.impact(.light)
         }
+    }
+
+    private var availableHadithBooks: [HadithBook] {
+        let available = ReminderContent.hadithBooks
+        return available.isEmpty ? [ReminderContent.defaultHadithBook] : available
+    }
+
+    private var selectedHadithBook: HadithBook {
+        let preferred = HadithBook(rawValue: selectedHadithBookRaw) ?? ReminderContent.defaultHadithBook
+        if ReminderContent.hadithCount(in: preferred) > 0 {
+            return preferred
+        }
+        return ReminderContent.defaultHadithBook
+    }
+
+    private var currentHadithTotal: Int {
+        ReminderContent.hadithCount(in: selectedHadithBook)
+    }
+
+    private var currentHadith: Hadith {
+        ReminderContent.hadith(at: hadithIndex, in: selectedHadithBook)
+    }
+
+    private var hadithReadLog: [String: [HadithReadRecord]] {
+        HadithReadLogStore.decode(hadithReadLogStorage)
+    }
+
+    private var hadithBookmarks: [HadithBookmarkRecord] {
+        HadithReadLogStore.decodeBookmarks(hadithBookmarksStorage)
+    }
+
+    private var sortedBookmarks: [HadithBookmarkRecord] {
+        hadithBookmarks.sorted {
+            if $0.createdAt == $1.createdAt {
+                if $0.bookRawValue == $1.bookRawValue {
+                    return $0.number < $1.number
+                }
+                return $0.bookRawValue < $1.bookRawValue
+            }
+            return $0.createdAt > $1.createdAt
+        }
+    }
+
+    private var isReadToday: Bool {
+        let todayKey = HadithReadLogStore.dayKey(for: Date())
+        let records = hadithReadLog[todayKey] ?? []
+        return records.contains(where: { $0.book == currentHadith.book && $0.number == currentHadith.number })
+    }
+
+    private var isBookmarked: Bool {
+        hadithBookmarks.contains(where: { $0.book == currentHadith.book && $0.number == currentHadith.number })
+    }
+
+    private func selectHadithBook(_ book: HadithBook) {
+        selectedHadithBookRaw = book.rawValue
+        hadithIndex = 0
+        Haptics.selection()
+    }
+
+    private func normalizeHadithBookSelection() {
+        let resolved = selectedHadithBook
+        if selectedHadithBookRaw != resolved.rawValue {
+            selectedHadithBookRaw = resolved.rawValue
+        }
+    }
+
+    private func normalizeHadithIndex() {
+        let total = currentHadithTotal
+        guard total > 0 else {
+            hadithIndex = 0
+            return
+        }
+        hadithIndex = min(max(hadithIndex, 0), total - 1)
+    }
+
+    private func markCurrentHadithRead() {
+        guard currentHadith.number > 0 else { return }
+        let key = HadithReadLogStore.dayKey(for: Date())
+        var log = hadithReadLog
+        var records = log[key] ?? []
+        let record = HadithReadRecord(book: currentHadith.book, number: currentHadith.number)
+
+        if records.contains(record) {
+            Haptics.selection()
+            return
+        }
+
+        records.append(record)
+        records.sort {
+            if $0.bookRawValue == $1.bookRawValue {
+                return $0.number < $1.number
+            }
+            return $0.bookRawValue < $1.bookRawValue
+        }
+        log[key] = records
+        hadithReadLogStorage = HadithReadLogStore.encode(log)
+        Haptics.impact(.light)
+    }
+
+    private func toggleCurrentHadithBookmark() {
+        guard currentHadith.number > 0 else { return }
+        var bookmarks = hadithBookmarks
+        if let existingIndex = bookmarks.firstIndex(where: { $0.book == currentHadith.book && $0.number == currentHadith.number }) {
+            bookmarks.remove(at: existingIndex)
+            hadithBookmarksStorage = HadithReadLogStore.encodeBookmarks(bookmarks)
+            Haptics.selection()
+            return
+        }
+        bookmarks.append(HadithBookmarkRecord(book: currentHadith.book, number: currentHadith.number))
+        hadithBookmarksStorage = HadithReadLogStore.encodeBookmarks(bookmarks)
+        Haptics.impact(.light)
+    }
+
+    private func jumpToBookmark(_ record: HadithBookmarkRecord) {
+        guard let index = ReminderContent.hadithIndex(number: record.number, in: record.book) else { return }
+        selectedHadithBookRaw = record.book.rawValue
+        hadithIndex = index
+        showHadithBookmarks = false
+        Haptics.selection()
+    }
+
+    private func deleteBookmark(_ record: HadithBookmarkRecord) {
+        var bookmarks = hadithBookmarks
+        bookmarks.removeAll(where: { $0.book == record.book && $0.number == record.number })
+        hadithBookmarksStorage = HadithReadLogStore.encodeBookmarks(bookmarks)
+    }
+
+    private func copyCurrentHadith() {
+        guard !currentHadith.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let header = "\(currentHadith.book.displayName) • No. \(currentHadith.number)"
+        let source = currentHadith.source.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value: String
+        if source.isEmpty {
+            value = "\(header)\n\n\(currentHadith.text)"
+        } else {
+            value = "\(header)\n\n\(currentHadith.text)\n\nSource: \(source)"
+        }
+        UIPasteboard.general.string = value
+        Haptics.impact(.light)
+    }
+
+    private func normalizedSurah(_ value: Int) -> Int {
+        min(max(value, 1), 114)
+    }
+
+    private func normalizedPage(_ value: Int) -> Int {
+        min(max(value, 1), 604)
+    }
+}
+
+private struct QuranSurahSummary: Codable, Hashable, Identifiable {
+    let number: Int
+    let name: String
+    let englishName: String
+
+    var id: Int { number }
+}
+
+private struct QuranAyah: Codable, Hashable, Identifiable {
+    let numberInSurah: Int
+    let text: String
+
+    var id: Int { numberInSurah }
+}
+
+private struct QuranSurahContent: Codable, Hashable {
+    let number: Int
+    let name: String
+    let englishName: String
+    let revelationType: String
+    let ayahs: [QuranAyah]
+}
+
+private struct QuranPageSurahRef: Codable, Hashable {
+    let number: Int
+    let name: String
+    let englishName: String
+}
+
+private struct QuranPageAyah: Codable, Hashable, Identifiable {
+    let number: Int
+    let numberInSurah: Int
+    let text: String
+    let surah: QuranPageSurahRef
+
+    var id: String {
+        "\(number)-\(surah.number)-\(numberInSurah)"
+    }
+}
+
+private struct QuranPageData: Codable, Hashable {
+    let number: Int
+    let ayahs: [QuranPageAyah]
+}
+
+private struct QuranResponse<T: Decodable>: Decodable {
+    let data: T
+}
+
+@MainActor
+private final class QuranService: ObservableObject {
+    @Published var surahs: [QuranSurahSummary] = []
+    @Published var currentSurah: QuranSurahContent?
+    @Published var currentPage: QuranPageData?
+    @Published var isLoading = false
+    @Published var isPageLoading = false
+    @Published var errorMessage: String?
+    @Published var pageErrorMessage: String?
+    @Published var isUsingOfflineData = false
+
+    private var cache: [Int: QuranSurahContent] = [:]
+    private var pageCache: [Int: QuranPageData] = [:]
+    private var didLoadSurahList = false
+
+    func loadIfNeeded(initialSurah: Int) async {
+        let safeSurah = min(max(initialSurah, 1), 114)
+        if surahs.isEmpty, let cachedList = QuranLocalStore.loadSurahList() {
+            surahs = cachedList
+            didLoadSurahList = true
+            isUsingOfflineData = true
+        }
+        if !didLoadSurahList {
+            await loadSurahList()
+        }
+        if currentSurah?.number != safeSurah {
+            await loadSurah(number: safeSurah)
+        }
+    }
+
+    func loadSurah(number: Int, forceRefresh: Bool = false) async {
+        let safeSurah = min(max(number, 1), 114)
+        if !didLoadSurahList {
+            await loadSurahList()
+        }
+
+        if !forceRefresh, let cached = cache[safeSurah] {
+            currentSurah = cached
+            errorMessage = nil
+            return
+        }
+
+        if !forceRefresh,
+           let cachedOnDisk = QuranLocalStore.loadSurah(number: safeSurah) {
+            cache[safeSurah] = cachedOnDisk
+            currentSurah = cachedOnDisk
+            errorMessage = nil
+            isUsingOfflineData = true
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        do {
+            let surah = try await QuranAPI.fetchSurah(number: safeSurah)
+            cache[safeSurah] = surah
+            currentSurah = surah
+            isUsingOfflineData = false
+            QuranLocalStore.saveSurah(surah)
+        } catch {
+            if let cachedOnDisk = QuranLocalStore.loadSurah(number: safeSurah) {
+                cache[safeSurah] = cachedOnDisk
+                currentSurah = cachedOnDisk
+                isUsingOfflineData = true
+                errorMessage = nil
+            } else {
+                errorMessage = "Unable to load Quran right now."
+            }
+        }
+        isLoading = false
+    }
+
+    func loadPageIfNeeded(initialPage: Int) async {
+        let safePage = min(max(initialPage, 1), 604)
+        if currentPage?.number != safePage {
+            await loadPage(number: safePage)
+        }
+    }
+
+    func loadPage(number: Int, forceRefresh: Bool = false) async {
+        let safePage = min(max(number, 1), 604)
+
+        if !forceRefresh, let cached = pageCache[safePage] {
+            currentPage = cached
+            pageErrorMessage = nil
+            return
+        }
+
+        if !forceRefresh, let disk = QuranLocalStore.loadPage(number: safePage) {
+            pageCache[safePage] = disk
+            currentPage = disk
+            pageErrorMessage = nil
+            isUsingOfflineData = true
+            return
+        }
+
+        isPageLoading = true
+        pageErrorMessage = nil
+        do {
+            let page = try await QuranAPI.fetchPage(number: safePage)
+            pageCache[safePage] = page
+            currentPage = page
+            isUsingOfflineData = false
+            QuranLocalStore.savePage(page)
+        } catch {
+            if let disk = QuranLocalStore.loadPage(number: safePage) {
+                pageCache[safePage] = disk
+                currentPage = disk
+                pageErrorMessage = nil
+                isUsingOfflineData = true
+            } else {
+                pageErrorMessage = "Unable to load Quran page right now."
+            }
+        }
+        isPageLoading = false
+    }
+
+    private func loadSurahList() async {
+        if surahs.isEmpty, let cached = QuranLocalStore.loadSurahList() {
+            surahs = cached
+            didLoadSurahList = true
+            isUsingOfflineData = true
+        }
+
+        do {
+            surahs = try await QuranAPI.fetchSurahList()
+            didLoadSurahList = true
+            isUsingOfflineData = false
+            QuranLocalStore.saveSurahList(surahs)
+        } catch {
+            if let cached = QuranLocalStore.loadSurahList(), !cached.isEmpty {
+                surahs = cached
+                didLoadSurahList = true
+                isUsingOfflineData = true
+            } else {
+                surahs = []
+                didLoadSurahList = false
+            }
+        }
+    }
+}
+
+private enum QuranLocalStore {
+    private static let fileManager = FileManager.default
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
+
+    private static var directoryURL: URL? {
+        guard let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return base.appendingPathComponent("QuranCache", isDirectory: true)
+    }
+
+    private static var surahListURL: URL? {
+        directoryURL?.appendingPathComponent("surah-list.json")
+    }
+
+    private static func surahURL(number: Int) -> URL? {
+        directoryURL?.appendingPathComponent("surah-\(number).json")
+    }
+
+    private static func pageURL(number: Int) -> URL? {
+        directoryURL?.appendingPathComponent("page-\(number).json")
+    }
+
+    static func saveSurahList(_ surahs: [QuranSurahSummary]) {
+        guard let url = surahListURL else { return }
+        do {
+            try ensureDirectory()
+            let data = try encoder.encode(surahs)
+            try data.write(to: url, options: Data.WritingOptions.atomic)
+        } catch {
+            return
+        }
+    }
+
+    static func loadSurahList() -> [QuranSurahSummary]? {
+        guard let url = surahListURL,
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? decoder.decode([QuranSurahSummary].self, from: data)
+    }
+
+    static func saveSurah(_ surah: QuranSurahContent) {
+        guard let url = surahURL(number: surah.number) else { return }
+        do {
+            try ensureDirectory()
+            let data = try encoder.encode(surah)
+            try data.write(to: url, options: Data.WritingOptions.atomic)
+        } catch {
+            return
+        }
+    }
+
+    static func loadSurah(number: Int) -> QuranSurahContent? {
+        guard let url = surahURL(number: number),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? decoder.decode(QuranSurahContent.self, from: data)
+    }
+
+    static func savePage(_ page: QuranPageData) {
+        guard let url = pageURL(number: page.number) else { return }
+        do {
+            try ensureDirectory()
+            let data = try encoder.encode(page)
+            try data.write(to: url, options: Data.WritingOptions.atomic)
+        } catch {
+            return
+        }
+    }
+
+    static func loadPage(number: Int) -> QuranPageData? {
+        guard let url = pageURL(number: number),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return try? decoder.decode(QuranPageData.self, from: data)
+    }
+
+    private static func ensureDirectory() throws {
+        guard let directoryURL else { return }
+        if !fileManager.fileExists(atPath: directoryURL.path) {
+            try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        }
+    }
+}
+
+private enum QuranAPI {
+    static func fetchSurahList() async throws -> [QuranSurahSummary] {
+        guard let url = URL(string: "https://api.alquran.cloud/v1/surah") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        let decoded = try JSONDecoder().decode(QuranResponse<[QuranSurahSummary]>.self, from: data)
+        return decoded.data
+    }
+
+    static func fetchSurah(number: Int) async throws -> QuranSurahContent {
+        guard let url = URL(string: "https://api.alquran.cloud/v1/surah/\(number)/quran-uthmani") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        let decoded = try JSONDecoder().decode(QuranResponse<QuranSurahContent>.self, from: data)
+        return decoded.data
+    }
+
+    static func fetchPage(number: Int) async throws -> QuranPageData {
+        guard let url = URL(string: "https://api.alquran.cloud/v1/page/\(number)/quran-uthmani") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        let decoded = try JSONDecoder().decode(QuranResponse<QuranPageData>.self, from: data)
+        return decoded.data
+    }
+}
+
+private struct QuranCard: View {
+    @ObservedObject var service: QuranService
+    @Binding var selectedSurah: Int
+    let onOpenReader: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center) {
+                Label("Digital Quran", systemImage: "book.pages")
+                    .foregroundColor(primaryGreen)
+                    .font(.headline)
+                Spacer()
+                if service.isUsingOfflineData {
+                    Text("Offline")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(primaryGreen)
+                }
+                if service.isLoading {
+                    ProgressView()
+                        .tint(primaryGreen)
+                }
+            }
+
+            Text(headerTitle)
+                .font(.title3.weight(.semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
+            Text("Surah \(selectedSurah)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Button {
+                onOpenReader()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "book.fill")
+                    Text("Open Full Page Mushaf")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(primaryGreen.opacity(0.2))
+                .foregroundColor(primaryGreen)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(primaryGreen.opacity(0.65), lineWidth: 1)
+                )
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    selectedSurah = max(1, selectedSurah - 1)
+                    Haptics.selection()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(glass)
+                        .foregroundColor(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(glassStroke, lineWidth: 1)
+                        )
+                }
+                .disabled(selectedSurah <= 1)
+                .opacity(selectedSurah <= 1 ? 0.5 : 1)
+
+                Menu {
+                    ForEach(menuSurahs) { surah in
+                        Button {
+                            selectedSurah = surah.number
+                            Haptics.selection()
+                        } label: {
+                            if surah.number == selectedSurah {
+                                Label("\(surah.number). \(surah.name)", systemImage: "checkmark")
+                            } else {
+                                Text("\(surah.number). \(surah.name)")
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Jump to Surah")
+                            .font(.headline)
+                        Image(systemName: "chevron.down")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(glass)
+                    .foregroundColor(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(glassStroke, lineWidth: 1)
+                    )
+                }
+
+                Button {
+                    selectedSurah = min(114, selectedSurah + 1)
+                    Haptics.selection()
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(glass)
+                        .foregroundColor(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(glassStroke, lineWidth: 1)
+                        )
+                }
+                .disabled(selectedSurah >= 114)
+                .opacity(selectedSurah >= 114 ? 0.5 : 1)
+            }
+
+            quranContent
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var quranContent: some View {
+        if let errorMessage = service.errorMessage {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button("Retry") {
+                    Task {
+                        await service.loadSurah(number: selectedSurah, forceRefresh: true)
+                    }
+                }
+                .font(.headline)
+                .tint(primaryGreen)
+            }
+        } else if let surah = service.currentSurah {
+            ScrollView(.vertical) {
+                VStack(alignment: .trailing, spacing: 14) {
+                    ForEach(surah.ayahs) { ayah in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text("\(ayah.numberInSurah)")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(primaryGreen)
+                                .padding(7)
+                                .background(glass, in: Circle())
+
+                            Text(ayah.text)
+                                .font(.system(size: 22, weight: .regular, design: .serif))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.trailing)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                        .environment(\.layoutDirection, .rightToLeft)
+                    }
+                }
+            }
+            .frame(height: 260)
+            .scrollIndicators(.visible)
+        } else {
+            Text("Loading Quran...")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var headerTitle: String {
+        if let current = service.currentSurah, current.number == selectedSurah {
+            return current.name
+        }
+        if let surah = service.surahs.first(where: { $0.number == selectedSurah }) {
+            return surah.name
+        }
+        return "القرآن الكريم"
+    }
+
+    private var menuSurahs: [QuranSurahSummary] {
+        if service.surahs.isEmpty {
+            return (1...114).map { QuranSurahSummary(number: $0, name: "سورة \($0)", englishName: "") }
+        }
+        return service.surahs
+    }
+}
+
+private struct QuranMushafView: View {
+    @ObservedObject var service: QuranService
+    @Binding var selectedPage: Int
+    @Environment(\.dismiss) private var dismiss
+    @State private var sliderPage: Double = 1
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(red: 0.95, green: 0.92, blue: 0.84)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 14) {
+                    header
+                    controls
+                    pageContainer
+                }
+                .padding()
+            }
+            .navigationTitle("القرآن الكريم")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.brown)
+                }
+            }
+        }
+        .preferredColorScheme(.light)
+        .task {
+            sliderPage = Double(selectedPage)
+            await service.loadPageIfNeeded(initialPage: selectedPage)
+        }
+        .onChange(of: selectedPage) { _, newValue in
+            sliderPage = Double(newValue)
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            if service.isUsingOfflineData {
+                Label("Offline", systemImage: "wifi.slash")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.brown)
+            }
+            Spacer()
+            Text("Page \(selectedPage) / 604")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.brown)
+        }
+    }
+
+    private var controls: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Button {
+                    selectedPage = max(1, selectedPage - 1)
+                    Haptics.selection()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                        Text("Prev")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.7))
+                    .foregroundColor(.brown)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.brown.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .disabled(selectedPage <= 1)
+                .opacity(selectedPage <= 1 ? 0.5 : 1)
+
+                Button {
+                    selectedPage = min(604, selectedPage + 1)
+                    Haptics.selection()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Next")
+                            .font(.headline)
+                        Image(systemName: "chevron.right")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.7))
+                    .foregroundColor(.brown)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.brown.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .disabled(selectedPage >= 604)
+                .opacity(selectedPage >= 604 ? 0.5 : 1)
+            }
+
+            Slider(
+                value: $sliderPage,
+                in: 1...604,
+                step: 1
+            ) { isEditing in
+                if !isEditing {
+                    let rounded = Int(sliderPage.rounded())
+                    if rounded != selectedPage {
+                        selectedPage = rounded
+                        Haptics.selection()
+                    }
+                }
+            }
+            .tint(.brown)
+        }
+    }
+
+    @ViewBuilder
+    private var pageContainer: some View {
+        if let error = service.pageErrorMessage {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(error)
+                    .foregroundColor(.brown)
+                Button("Retry Page") {
+                    Task {
+                        await service.loadPage(number: selectedPage, forceRefresh: true)
+                    }
+                }
+                .font(.headline)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding()
+            .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        } else if let page = service.currentPage, page.number == selectedPage {
+            ScrollView(.vertical) {
+                VStack(alignment: .trailing, spacing: 16) {
+                    Text(surahTitle(for: page))
+                        .font(.custom("Geeza Pro", size: 22))
+                        .foregroundColor(.brown)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                    Text(mushafText(for: page))
+                        .font(.custom("Geeza Pro", size: 31))
+                        .lineSpacing(15)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(.black.opacity(0.88))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .environment(\.layoutDirection, .rightToLeft)
+                }
+                .padding(20)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color(red: 0.99, green: 0.97, blue: 0.91))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.brown.opacity(0.25), lineWidth: 1)
+            )
+        } else {
+            VStack(spacing: 10) {
+                if service.isPageLoading {
+                    ProgressView()
+                        .tint(.brown)
+                }
+                Text("Loading page...")
+                    .font(.footnote)
+                    .foregroundColor(.brown)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+    }
+
+    private func surahTitle(for page: QuranPageData) -> String {
+        var names: [String] = []
+        for ayah in page.ayahs {
+            if names.last != ayah.surah.name {
+                names.append(ayah.surah.name)
+            }
+        }
+        return names.joined(separator: " • ")
+    }
+
+    private func mushafText(for page: QuranPageData) -> String {
+        var chunks: [String] = []
+        var currentSurah = -1
+
+        for ayah in page.ayahs {
+            if ayah.surah.number != currentSurah {
+                currentSurah = ayah.surah.number
+                chunks.append("\n\n۞ \(ayah.surah.name) ۞\n")
+            }
+            chunks.append("\(ayah.text) ﴿\(arabicDigits(ayah.numberInSurah))﴾")
+        }
+
+        return chunks.joined(separator: " ")
+    }
+
+    private func arabicDigits(_ value: Int) -> String {
+        let map: [Character: Character] = [
+            "0": "٠", "1": "١", "2": "٢", "3": "٣", "4": "٤",
+            "5": "٥", "6": "٦", "7": "٧", "8": "٨", "9": "٩"
+        ]
+        return String(String(value).map { map[$0] ?? $0 })
     }
 }
 
@@ -212,15 +1220,32 @@ private struct HadithCard: View {
     let hadith: Hadith
     let index: Int
     let total: Int
+    let books: [HadithBook]
+    let selectedBook: HadithBook
+    let isReadToday: Bool
+    let isBookmarked: Bool
+    let onSelectBook: (HadithBook) -> Void
+    let onRead: () -> Void
+    let onToggleBookmark: () -> Void
+    let onCopy: () -> Void
+    let onShowBookmarks: () -> Void
     let onNext: () -> Void
     let onPrevious: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 Label("Hadith of the Day", systemImage: "book.closed")
                     .foregroundColor(primaryGreen)
                     .font(.headline)
+                Spacer()
+                bookPicker
+            }
+
+            HStack(alignment: .firstTextBaseline) {
+                Text(selectedBook.displayName)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 Spacer()
                 Text("No. \(displayIndex) of \(total)")
                     .font(.caption)
@@ -240,6 +1265,84 @@ private struct HadithCard: View {
             Text(hadith.source)
                 .font(.caption)
                 .foregroundColor(.secondary)
+
+            Button {
+                onRead()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isReadToday ? "checkmark.circle.fill" : "checkmark.circle")
+                    Text(isReadToday ? "Read Today" : "Read")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isReadToday ? primaryGreen.opacity(0.16) : glass)
+                .foregroundColor(isReadToday ? primaryGreen : .white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(isReadToday ? primaryGreen : glassStroke, lineWidth: 1)
+                )
+            }
+            .disabled(total == 0)
+
+            HStack(spacing: 10) {
+                Button {
+                    onToggleBookmark()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        Text(isBookmarked ? "Bookmarked" : "Bookmark")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(glass)
+                    .foregroundColor(isBookmarked ? primaryGreen : .white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(isBookmarked ? primaryGreen : glassStroke, lineWidth: 1)
+                    )
+                }
+                .disabled(total == 0)
+
+                Button {
+                    onCopy()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.on.doc")
+                        Text("Copy")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(glass)
+                    .foregroundColor(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(glassStroke, lineWidth: 1)
+                    )
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    onShowBookmarks()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bookmark.circle")
+                        Text("View Bookmarks")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(glass)
+                    .foregroundColor(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(glassStroke, lineWidth: 1)
+                    )
+                }
+            }
 
             HStack(spacing: 10) {
                 Button {
@@ -289,6 +1392,9 @@ private struct HadithCard: View {
     }
 
     private var displayIndex: Int {
+        if hadith.number > 0 {
+            return hadith.number
+        }
         guard total > 0 else { return 0 }
         let safe = min(max(index, 0), total - 1)
         return safe + 1
@@ -301,6 +1407,309 @@ private struct HadithCard: View {
     private var isAtEnd: Bool {
         total == 0 || index >= total - 1
     }
+
+    @ViewBuilder
+    private var bookPicker: some View {
+        if books.count <= 1 {
+            EmptyView()
+        } else {
+            Menu {
+                ForEach(books) { book in
+                    Button {
+                        onSelectBook(book)
+                    } label: {
+                        if book == selectedBook {
+                            Label(book.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(book.displayName)
+                        }
+                    }
+                }
+            } label: {
+                Label("Book", systemImage: "books.vertical")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(primaryGreen)
+            }
+        }
+    }
+}
+
+private struct HadithBookmarksView: View {
+    let bookmarks: [HadithBookmarkRecord]
+    let onSelect: (HadithBookmarkRecord) -> Void
+    let onDelete: (HadithBookmarkRecord) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if bookmarks.isEmpty {
+                    ContentUnavailableView(
+                        "No Bookmarks Yet",
+                        systemImage: "bookmark.slash",
+                        description: Text("Bookmark hadiths and they will appear here.")
+                    )
+                } else {
+                    List {
+                        ForEach(bookmarks) { bookmark in
+                            Button {
+                                onSelect(bookmark)
+                            } label: {
+                                bookmarkRow(bookmark)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .onDelete(perform: delete)
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Hadith Bookmarks")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder
+    private func bookmarkRow(_ bookmark: HadithBookmarkRecord) -> some View {
+        let hadith = ReminderContent.hadith(number: bookmark.number, in: bookmark.book)
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(bookmark.book.displayName) • No. \(bookmark.number)")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.white)
+            Text(hadith?.text ?? "Hadith text unavailable.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func delete(at offsets: IndexSet) {
+        for index in offsets {
+            onDelete(bookmarks[index])
+        }
+    }
+}
+
+private struct HadithReadCalendarCard: View {
+    let selectedBook: HadithBook
+    let log: [String: [HadithReadRecord]]
+
+    @State private var monthAnchor = Date()
+    @State private var selectedDate = Date()
+
+    private let calendar = Calendar.current
+
+    private var monthTitle: String {
+        Self.monthFormatter.string(from: monthAnchor)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Read Calendar", systemImage: "calendar.badge.checkmark")
+                    .foregroundColor(primaryGreen)
+                    .font(.headline)
+                Spacer()
+                Text(selectedBook.displayName)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Button {
+                    shiftMonth(by: -1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(glass, in: Circle())
+                }
+
+                Spacer()
+                Text(monthTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                Spacer()
+
+                Button {
+                    shiftMonth(by: 1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(glass, in: Circle())
+                }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 8) {
+                ForEach(weekdaySymbols, id: \.self) { symbol in
+                    Text(symbol)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+
+                ForEach(Array(monthSlots.enumerated()), id: \.offset) { _, date in
+                    if let date {
+                        dayCell(for: date)
+                    } else {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.clear)
+                            .frame(height: 44)
+                    }
+                }
+            }
+
+            Divider()
+                .background(glassStroke)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(Self.daySummaryFormatter.string(from: selectedDate))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(selectionSummary)
+                    .font(.footnote)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+            }
+        }
+        .padding()
+        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(glassStroke, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func dayCell(for date: Date) -> some View {
+        let numbers = numbersRead(on: date)
+        let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+        let isToday = calendar.isDateInToday(date)
+
+        Button {
+            selectedDate = date
+            Haptics.selection()
+        } label: {
+            VStack(spacing: 2) {
+                Text("\(calendar.component(.day, from: date))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(isSelected ? .black : .white)
+                if let first = numbers.first {
+                    Text(numbersBadge(first: first, count: numbers.count))
+                        .font(.caption2)
+                        .foregroundColor(isSelected ? .black.opacity(0.85) : primaryGreen)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    Text(" ")
+                        .font(.caption2)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(backgroundColor(isSelected: isSelected, isToday: isToday))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(borderColor(isSelected: isSelected, hasReads: !numbers.isEmpty), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var monthSlots: [Date?] {
+        guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: monthAnchor)),
+              let dayRange = calendar.range(of: .day, in: .month, for: monthStart) else {
+            return []
+        }
+
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
+        let leading = (firstWeekday - calendar.firstWeekday + 7) % 7
+        var slots = Array<Date?>(repeating: nil, count: leading)
+
+        for day in dayRange {
+            if let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) {
+                slots.append(date)
+            }
+        }
+        return slots
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        let start = max(0, calendar.firstWeekday - 1)
+        let head = Array(symbols[start...])
+        let tail = Array(symbols[..<start])
+        return head + tail
+    }
+
+    private func shiftMonth(by value: Int) {
+        guard let shifted = calendar.date(byAdding: .month, value: value, to: monthAnchor) else {
+            return
+        }
+        monthAnchor = shifted
+        if !calendar.isDate(selectedDate, equalTo: shifted, toGranularity: .month) {
+            selectedDate = shifted
+        }
+        Haptics.selection()
+    }
+
+    private func numbersRead(on date: Date) -> [Int] {
+        let key = HadithReadLogStore.dayKey(for: date)
+        let records = log[key] ?? []
+        return Array(Set(records.filter { $0.book == selectedBook }.map(\.number))).sorted()
+    }
+
+    private var selectionSummary: String {
+        let numbers = numbersRead(on: selectedDate)
+        if numbers.isEmpty {
+            return "No Hadith marked as read for this date."
+        }
+        let values = numbers.map(String.init).joined(separator: ", ")
+        return "Read Hadith numbers: \(values)"
+    }
+
+    private func numbersBadge(first: Int, count: Int) -> String {
+        if count <= 1 {
+            return "#\(first)"
+        }
+        return "#\(first) +\(count - 1)"
+    }
+
+    private func backgroundColor(isSelected: Bool, isToday: Bool) -> Color {
+        if isSelected {
+            return primaryGreen
+        }
+        if isToday {
+            return glass.opacity(1.25)
+        }
+        return glass.opacity(0.3)
+    }
+
+    private func borderColor(isSelected: Bool, hasReads: Bool) -> Color {
+        if isSelected {
+            return primaryGreen
+        }
+        if hasReads {
+            return primaryGreen.opacity(0.8)
+        }
+        return glassStroke
+    }
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter
+    }()
+
+    private static let daySummaryFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
 }
 
 // ─────────────────────────── Daily Reminder
