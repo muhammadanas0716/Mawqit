@@ -2,17 +2,22 @@
 //  ContentView.swift
 //  Mawqit
 //
-//  Dark-theme redesign — 14 Jul 2025
+//  Forest redesign — 23 Mar 2026
 //
 
 import SwiftUI
 import UIKit
 import CoreLocation
 
-// ─────────────────────────── Color Palette (hard-coded)
-private let primaryGreen   = Color(red: 0.10, green: 0.55, blue: 0.44)   // #198C71
-private let glass          = Color.white.opacity(0.05)                  // subtle card
-private let glassStroke    = Color.white.opacity(0.10)
+// ─────────────────────────── Theme tokens
+private let primaryGreen = MawqitTheme.accentSun
+private let accentBlue = MawqitTheme.accentSky
+private let accentCoral = MawqitTheme.accentCoral
+private let inkText = MawqitTheme.ink
+private let accentInk = MawqitTheme.inkOnAccent
+private let glass = MawqitTheme.card
+private let raisedGlass = MawqitTheme.cardRaised
+private let glassStroke = MawqitTheme.cardStroke
 
 private struct HadithReadRecord: Codable, Hashable {
     let bookRawValue: String
@@ -151,7 +156,7 @@ struct ContentView: View {
                 .padding(.horizontal)
                 .frame(maxWidth: 600)
             }
-            .background(Color.black.ignoresSafeArea())      // pure dark bg
+            .background(MawqitSkyBackground())
             .scrollIndicators(.hidden)
             .refreshable { refresh() }
             .toolbar {
@@ -162,7 +167,7 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "gearshape")
                     }
-                    .tint(primaryGreen)
+                    .tint(accentBlue)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -170,13 +175,15 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .tint(primaryGreen)
+                    .tint(accentCoral)
                 }
             }
             .navigationTitle("Mawqit")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(MawqitTheme.backgroundTop.opacity(0.96), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .preferredColorScheme(.dark)   // force dark on devices in Light
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -758,7 +765,7 @@ private struct QuranCard: View {
 
             Text(headerTitle)
                 .font(.title3.weight(.semibold))
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
             Text("Surah \(selectedSurah)")
@@ -792,7 +799,7 @@ private struct QuranCard: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(glass)
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(glassStroke, lineWidth: 1)
@@ -823,7 +830,7 @@ private struct QuranCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(glass)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(glassStroke, lineWidth: 1)
@@ -838,7 +845,7 @@ private struct QuranCard: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(glass)
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(glassStroke, lineWidth: 1)
@@ -886,7 +893,7 @@ private struct QuranCard: View {
 
                             Text(ayah.text)
                                 .font(.system(size: 22, weight: .regular, design: .serif))
-                                .foregroundColor(.white)
+                                .foregroundColor(inkText)
                                 .multilineTextAlignment(.trailing)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                         }
@@ -930,7 +937,7 @@ private struct QuranMushafView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.95, green: 0.92, blue: 0.84)
+                MawqitTheme.readerBackground
                     .ignoresSafeArea()
 
                 VStack(spacing: 14) {
@@ -947,11 +954,10 @@ private struct QuranMushafView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(.brown)
+                    .foregroundColor(MawqitTheme.readerText)
                 }
             }
         }
-        .preferredColorScheme(.light)
         .task {
             sliderPage = Double(selectedPage)
             await service.loadPageIfNeeded(initialPage: selectedPage)
@@ -966,12 +972,12 @@ private struct QuranMushafView: View {
             if service.isUsingOfflineData {
                 Label("Offline", systemImage: "wifi.slash")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.brown)
+                    .foregroundColor(MawqitTheme.readerSecondaryText)
             }
             Spacer()
             Text("Page \(selectedPage) / 604")
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(.brown)
+                .foregroundColor(MawqitTheme.readerSecondaryText)
         }
     }
 
@@ -989,11 +995,11 @@ private struct QuranMushafView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.7))
-                    .foregroundColor(.brown)
+                    .background(raisedGlass)
+                    .foregroundColor(MawqitTheme.readerText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.brown.opacity(0.2), lineWidth: 1)
+                            .stroke(MawqitTheme.readerBorder, lineWidth: 1)
                     )
                 }
                 .disabled(selectedPage <= 1)
@@ -1010,11 +1016,11 @@ private struct QuranMushafView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.7))
-                    .foregroundColor(.brown)
+                    .background(raisedGlass)
+                    .foregroundColor(MawqitTheme.readerText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.brown.opacity(0.2), lineWidth: 1)
+                            .stroke(MawqitTheme.readerBorder, lineWidth: 1)
                     )
                 }
                 .disabled(selectedPage >= 604)
@@ -1034,7 +1040,7 @@ private struct QuranMushafView: View {
                     }
                 }
             }
-            .tint(.brown)
+            .tint(primaryGreen)
         }
     }
 
@@ -1043,7 +1049,7 @@ private struct QuranMushafView: View {
         if let error = service.pageErrorMessage {
             VStack(alignment: .leading, spacing: 10) {
                 Text(error)
-                    .foregroundColor(.brown)
+                    .foregroundColor(MawqitTheme.readerSecondaryText)
                 Button("Retry Page") {
                     Task {
                         await service.loadPage(number: selectedPage, forceRefresh: true)
@@ -1053,20 +1059,24 @@ private struct QuranMushafView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding()
-            .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(raisedGlass, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(MawqitTheme.readerBorder, lineWidth: 1)
+            )
         } else if let page = service.currentPage, page.number == selectedPage {
             ScrollView(.vertical) {
                 VStack(alignment: .trailing, spacing: 16) {
                     Text(surahTitle(for: page))
                         .font(.custom("Geeza Pro", size: 22))
-                        .foregroundColor(.brown)
+                        .foregroundColor(MawqitTheme.readerSecondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
 
                     Text(mushafText(for: page))
                         .font(.custom("Geeza Pro", size: 31))
                         .lineSpacing(15)
                         .multilineTextAlignment(.trailing)
-                        .foregroundColor(.black.opacity(0.88))
+                        .foregroundColor(MawqitTheme.readerText)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .environment(\.layoutDirection, .rightToLeft)
                 }
@@ -1074,24 +1084,29 @@ private struct QuranMushafView: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color(red: 0.99, green: 0.97, blue: 0.91))
+                    .fill(MawqitTheme.readerSurface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.brown.opacity(0.25), lineWidth: 1)
+                    .stroke(MawqitTheme.readerBorder, lineWidth: 1)
             )
+            .shadow(color: MawqitTheme.cardShadow, radius: 18, x: 0, y: 12)
         } else {
             VStack(spacing: 10) {
                 if service.isPageLoading {
                     ProgressView()
-                        .tint(.brown)
+                        .tint(primaryGreen)
                 }
                 Text("Loading page...")
                     .font(.footnote)
-                    .foregroundColor(.brown)
+                    .foregroundColor(MawqitTheme.readerSecondaryText)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(raisedGlass, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(MawqitTheme.readerBorder, lineWidth: 1)
+            )
         }
     }
 
@@ -1137,7 +1152,7 @@ private struct DateCard: View {
             Text(hijri.hijriDay)
                 .font(.system(size: 96, weight: .black, design: .serif))
                 .minimumScaleFactor(0.5)
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
 
             Text(hijri.hijriMonth)
                 .font(.system(.largeTitle, design: .serif).weight(.semibold))
@@ -1167,7 +1182,7 @@ private struct GreetingCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(greetingText)
                     .font(.title3.weight(.semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                 Text("May your day be filled with barakah.")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -1204,7 +1219,7 @@ private struct FactCard: View {
                 .foregroundColor(primaryGreen)
             Text(text)
                 .font(.body)
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
         }
         .padding()
         .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -1255,7 +1270,7 @@ private struct HadithCard: View {
             ScrollView(.vertical) {
                 Text(hadith.text)
                     .font(.body)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(height: 180)
@@ -1277,7 +1292,7 @@ private struct HadithCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(isReadToday ? primaryGreen.opacity(0.16) : glass)
-                .foregroundColor(isReadToday ? primaryGreen : .white)
+                .foregroundColor(isReadToday ? primaryGreen : inkText)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(isReadToday ? primaryGreen : glassStroke, lineWidth: 1)
@@ -1297,7 +1312,7 @@ private struct HadithCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(glass)
-                    .foregroundColor(isBookmarked ? primaryGreen : .white)
+                    .foregroundColor(isBookmarked ? primaryGreen : inkText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(isBookmarked ? primaryGreen : glassStroke, lineWidth: 1)
@@ -1316,7 +1331,7 @@ private struct HadithCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(glass)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(glassStroke, lineWidth: 1)
@@ -1336,7 +1351,7 @@ private struct HadithCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(glass)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(glassStroke, lineWidth: 1)
@@ -1356,7 +1371,7 @@ private struct HadithCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(glass)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(glassStroke, lineWidth: 1)
@@ -1376,7 +1391,7 @@ private struct HadithCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(primaryGreen)
-                    .foregroundColor(.white)
+                    .foregroundColor(accentInk)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .disabled(isAtEnd)
@@ -1441,32 +1456,40 @@ private struct HadithBookmarksView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if bookmarks.isEmpty {
-                    ContentUnavailableView(
-                        "No Bookmarks Yet",
-                        systemImage: "bookmark.slash",
-                        description: Text("Bookmark hadiths and they will appear here.")
-                    )
-                } else {
-                    List {
-                        ForEach(bookmarks) { bookmark in
-                            Button {
-                                onSelect(bookmark)
-                            } label: {
-                                bookmarkRow(bookmark)
+            ZStack {
+                MawqitSkyBackground()
+
+                Group {
+                    if bookmarks.isEmpty {
+                        ContentUnavailableView(
+                            "No Bookmarks Yet",
+                            systemImage: "bookmark.slash",
+                            description: Text("Bookmark hadiths and they will appear here.")
+                        )
+                    } else {
+                        List {
+                            ForEach(bookmarks) { bookmark in
+                                Button {
+                                    onSelect(bookmark)
+                                } label: {
+                                    bookmarkRow(bookmark)
+                                }
+                                .buttonStyle(.plain)
+                                .listRowBackground(raisedGlass)
                             }
-                            .buttonStyle(.plain)
+                            .onDelete(perform: delete)
                         }
-                        .onDelete(perform: delete)
+                        .listStyle(.insetGrouped)
+                        .scrollContentBackground(.hidden)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Hadith Bookmarks")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(MawqitTheme.backgroundTop.opacity(0.96), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
@@ -1475,7 +1498,7 @@ private struct HadithBookmarksView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("\(bookmark.book.displayName) • No. \(bookmark.number)")
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
             Text(hadith?.text ?? "Hadith text unavailable.")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -1522,7 +1545,7 @@ private struct HadithReadCalendarCard: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                         .padding(8)
                         .background(glass, in: Circle())
                 }
@@ -1530,7 +1553,7 @@ private struct HadithReadCalendarCard: View {
                 Spacer()
                 Text(monthTitle)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                 Spacer()
 
                 Button {
@@ -1538,7 +1561,7 @@ private struct HadithReadCalendarCard: View {
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                         .padding(8)
                         .background(glass, in: Circle())
                 }
@@ -1572,7 +1595,7 @@ private struct HadithReadCalendarCard: View {
                     .foregroundColor(.secondary)
                 Text(selectionSummary)
                     .font(.footnote)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .lineLimit(2)
             }
         }
@@ -1597,11 +1620,11 @@ private struct HadithReadCalendarCard: View {
             VStack(spacing: 2) {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(isSelected ? .black : .white)
+                    .foregroundColor(isSelected ? accentInk : inkText)
                 if let first = numbers.first {
                     Text(numbersBadge(first: first, count: numbers.count))
                         .font(.caption2)
-                        .foregroundColor(isSelected ? .black.opacity(0.85) : primaryGreen)
+                        .foregroundColor(isSelected ? accentInk.opacity(0.86) : primaryGreen)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 } else {
@@ -1725,13 +1748,13 @@ private struct DailyReminderCard: View {
 
             Text(reminder.text)
                 .font(.body)
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
 
             Divider().background(glassStroke)
 
             Text("Dua of the Day")
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
 
             Text(dua.text)
                 .font(.footnote)
@@ -1784,7 +1807,7 @@ private struct DhikrCounterCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(currentDhikr.text)
                         .font(.title3.weight(.semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                     Text("Recommended: \(currentDhikr.count)x • \(currentDhikr.source)")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -1792,7 +1815,7 @@ private struct DhikrCounterCard: View {
                 Spacer()
                 Text("\(count)")
                     .font(.system(size: 44, weight: .black, design: .serif))
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
             }
 
             HStack(spacing: 10) {
@@ -1805,7 +1828,7 @@ private struct DhikrCounterCard: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(primaryGreen)
-                        .foregroundColor(.white)
+                        .foregroundColor(accentInk)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
@@ -1818,7 +1841,7 @@ private struct DhikrCounterCard: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(glass)
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(glassStroke, lineWidth: 1)
@@ -1884,7 +1907,7 @@ private struct RemindersCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(glass)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(glassStroke, lineWidth: 1)
@@ -2008,7 +2031,7 @@ private struct PrayerTimesList: View {
                             .foregroundColor(.secondary)
                         Text(next.0.displayName)
                             .font(.title3.weight(.semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(inkText)
                     }
                     Spacer()
                     Text(countdownString(to: next.1, now: context.date))
@@ -2146,7 +2169,7 @@ private struct QiblaCompass: View {
 
                 ForEach(0..<4) { idx in
                     Capsule()
-                        .fill(Color.white.opacity(0.2))
+                        .fill(primaryGreen.opacity(0.26))
                         .frame(width: 2, height: 10)
                         .offset(y: -80)
                         .rotationEffect(.degrees(Double(idx) * 90))
@@ -2189,7 +2212,7 @@ private struct PrayerTimeRow: View {
         HStack {
             Text(name)
                 .font(.subheadline)
-                .foregroundColor(isNext ? .white : .secondary)
+                .foregroundColor(isNext ? inkText : .secondary)
             Spacer()
             Text(time)
                 .font(.subheadline.weight(isNext ? .semibold : .regular))
@@ -2209,7 +2232,7 @@ private struct SecondaryInfo: View {
 
             Text(hijri.hijriYear)
                 .font(.title)
-                .foregroundColor(.white)
+                .foregroundColor(inkText)
                 .padding(.leading, 28)
 
             Divider().background(glassStroke)
@@ -2300,11 +2323,11 @@ private struct TimelineRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(event.displayDate)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
 
                 Text(event.title)
                     .font(.body)
-                    .foregroundColor(.white)
+                    .foregroundColor(inkText)
                     .strikethrough(status == .past, color: .secondary)
 
                 Text(distanceString)

@@ -7,9 +7,11 @@ import SwiftUI
 import UserNotifications
 import UIKit
 
-private let primaryGreen = Color(red: 0.10, green: 0.55, blue: 0.44)
-private let glass = Color.white.opacity(0.05)
-private let glassStroke = Color.white.opacity(0.10)
+private let primaryGreen = MawqitTheme.accentSun
+private let accentBlue = MawqitTheme.accentSky
+private let inkText = MawqitTheme.ink
+private let accentInk = MawqitTheme.inkOnAccent
+private let mutedInk = MawqitTheme.mutedInk
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -28,42 +30,50 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 18) {
-                    statusCard
-                    reminderCard(
-                        title: "Hadith Reminder",
-                        subtitle: "A short daily reminder to open your hadith.",
-                        isOn: $hadithEnabled,
-                        time: timeBinding($hadithTimeSeconds)
-                    )
+            ZStack {
+                MawqitSkyBackground()
 
-                    reminderCard(
-                        title: "Dhikr Reminder",
-                        subtitle: "Pause for dhikr and reflection.",
-                        isOn: $dhikrEnabled,
-                        time: timeBinding($dhikrTimeSeconds)
-                    )
+                ScrollView {
+                    VStack(spacing: 16) {
+                        statusCard
 
-                    reminderCard(
-                        title: "Jumu'ah Reminder",
-                        subtitle: "Weekly reminder every Friday.",
-                        isOn: $jumuahEnabled,
-                        time: timeBinding($jumuahTimeSeconds),
-                        isWeekly: true
-                    )
+                        reminderCard(
+                            title: "Hadith Reminder",
+                            subtitle: "A short daily reminder to open your hadith.",
+                            isOn: $hadithEnabled,
+                            time: timeBinding($hadithTimeSeconds)
+                        )
+
+                        reminderCard(
+                            title: "Dhikr Reminder",
+                            subtitle: "Pause for dhikr and reflection.",
+                            isOn: $dhikrEnabled,
+                            time: timeBinding($dhikrTimeSeconds)
+                        )
+
+                        reminderCard(
+                            title: "Jumu'ah Reminder",
+                            subtitle: "Weekly reminder every Friday.",
+                            isOn: $jumuahEnabled,
+                            time: timeBinding($jumuahTimeSeconds),
+                            isWeekly: true
+                        )
+                    }
+                    .padding(.top, 20)
+                    .padding(.horizontal)
+                    .padding(.bottom, 14)
+                    .frame(maxWidth: 640)
                 }
-                .padding(.top, 24)
-                .padding(.horizontal)
-                .frame(maxWidth: 640)
             }
-            .background(Color.black.ignoresSafeArea())
             .navigationTitle("Reminders")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(MawqitTheme.backgroundTop.opacity(0.96), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .tint(primaryGreen)
+                        .tint(accentBlue)
                 }
             }
             .onChange(of: hadithEnabled) { _ in updateNotifications() }
@@ -74,18 +84,17 @@ struct SettingsView: View {
             .onChange(of: jumuahTimeSeconds) { _ in updateNotifications() }
             .task { await refreshAuthorizationStatus() }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var statusCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Notifications", systemImage: "bell.badge")
-                .foregroundColor(primaryGreen)
+                .foregroundColor(accentBlue)
                 .font(.headline)
 
             Text(statusText)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(mutedInk)
 
             Button {
                 Task {
@@ -102,20 +111,16 @@ struct SettingsView: View {
                 Text(buttonTitle)
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 12)
                     .background(primaryGreen)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .foregroundColor(accentInk)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .disabled(authorizationStatus == .authorized)
             .opacity(authorizationStatus == .authorized ? 0.6 : 1)
         }
         .padding()
-        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(glassStroke, lineWidth: 1)
-        )
+        .mawqitCard(cornerRadius: 20)
     }
 
     private func reminderCard(title: String, subtitle: String, isOn: Binding<Bool>, time: Binding<Date>, isWeekly: Bool = false) -> some View {
@@ -124,33 +129,29 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(inkText)
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(mutedInk)
                 }
             }
-            .tint(primaryGreen)
+            .tint(accentBlue)
             .onChange(of: isOn.wrappedValue) { _ in Haptics.selection() }
 
             if isOn.wrappedValue {
                 HStack {
                     Label(isWeekly ? "Friday" : "Daily", systemImage: "clock")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(mutedInk)
                     Spacer()
                     DatePicker("", selection: time, displayedComponents: .hourAndMinute)
                         .labelsHidden()
-                        .tint(primaryGreen)
+                        .tint(accentBlue)
                 }
             }
         }
         .padding()
-        .background(glass, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(glassStroke, lineWidth: 1)
-        )
+        .mawqitCard(cornerRadius: 20)
     }
 
     private var statusText: String {

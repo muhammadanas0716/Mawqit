@@ -27,6 +27,8 @@ struct MawqitApp: App {
             }
             // Ensures animation applies on first flag change
             .animation(.easeInOut(duration: 0.45), value: didFinishOnboarding)
+            .preferredColorScheme(.dark)
+            .tint(MawqitTheme.accentSun)
         }
     }
 }
